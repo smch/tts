@@ -1,0 +1,322 @@
+<html>
+<head>
+    <title>TTS with Amazon Polly and word seeking</title>
+<style>
+body {
+    width: 700px;
+    margin: auto;
+    padding-top: 20px;
+}
+h1,h2,h3,h4,h5,h6 {
+    font-family: sans-serif;
+}
+label {
+    font-family: sans-serif;
+}
+.ts-word {
+    border-bottom: 1px solid #bbb;
+    padding-left: 2px;
+    padding-right: 2px;
+    cursor: pointer;   
+}
+.ts-word:hover {
+    background: #555;
+    color: #eee;
+}
+.active {
+    background: black;
+    color: white;
+}
+.seen {
+    background: none;
+    border-bottom: 1px solid #eee;
+    color: black;
+}
+.seek-active {
+    background: yellow;
+}
+.active.seek-active {
+    background: black;
+    color: white;
+}
+#stage {
+    margin: auto;
+    margin-bottom: 10%;
+    width: 600px;
+    position: relative;
+}
+#word {
+    position: absolute;
+    top: 20px;
+    right: 0px;
+}
+#text {
+    padding-top: 20px;
+    font-size: 120%;
+    line-height: 150%;
+}
+</style>
+</head>
+<body>
+<div id = "stage">
+    <audio id = "audio" controls>
+      <source src="test.mp3"></source>
+    </audio>
+
+    <div id="playback-controls">
+        <p class="playback-rate" title="Note that increasing the reading rate will decrease accuracy of word highlights">
+            <label for="playback-rate">Reading rate:</label>
+                <input id="playback-rate" type="range" min="0.5" max="5.0" value="1.0" step="0.1" disabled onchange='this.nextElementSibling.textContent = String(Math.round(this.valueAsNumber * 10) / 10) + "\u00D7";'>
+                <output>1&times;</output>   
+        </p>
+    </div>
+
+    <div id = "text">
+        <div id="original-text"></div>
+    </div>
+
+    <div id="word"></div>
+</div>
+
+
+
+<script>
+String.prototype.insert = function(index, string) {
+  if (index > 0)
+  {
+    return this.substring(0, index) + string + this.substring(index, this.length);
+  }
+
+  return string + this;
+};
+
+
+
+window.onload = function() {
+
+var spns = document.getElementsByTagName("span");
+let audio = document.getElementById("audio");
+let wordArea = document.getElementById("word");
+
+
+    var rate_range_element = document.getElementById('playback-rate');
+    rate_range_element.disabled = false;
+    rate_range_element.addEventListener('change', function (e) {
+        audio.playbackRate = this.valueAsNumber;
+    });
+
+
+
+audio.addEventListener("timeupdate", f1);
+function f1(){
+  var i;  
+  for (i = 0 ; i< spns.length ; i++){
+    var time = Number(spns[i].id.slice(2));
+
+    //trouble with this is that it updates all spans, all the time. 
+    //so it is constantly adding and removing the active class I think
+
+    //it also doesn't work when you seek the audio
+    if(time < audio.currentTime * 1000){ // is the span timestamp less than the current audio time 
+      if (i>0) { 
+        spns[i -1].classList.add("seen"); //get the one prior to the current one, and mark it as seen
+        spns[i -1].classList.remove("active");  //no longer active
+        }
+        
+      spns[i].classList.add("active"); 
+ 
+    }
+  }
+
+  //this is annoying because it updates it even when the word hasn't changed. but you can't perceive it
+  var seekSpans = document.getElementsByClassName("seek-active");
+    while (seekSpans.length) {
+        seekSpans[0].classList.remove("seek-active");
+    }
+
+  var activeSpans = document.getElementsByClassName("active");
+  activeSpans[0].classList.add('seek-active');
+
+
+  wordArea.innerHTML = activeSpans[0].innerHTML;
+}
+
+
+
+
+}; /* end window onload */
+
+function seek() {
+   audio.currentTime = this.id.slice(2) / 1000;
+   audio.play()
+    var seen = document.getElementsByClassName("seen");
+    while (seen.length)
+    seen[0].classList.remove("seen");
+    var active = document.getElementsByClassName("active");
+    while (active.length)
+    active[0].classList.remove("active");
+}
+
+
+fetch('test.txt')
+  .then(response => response.text())
+  .then((data) => {
+    document.getElementById("original-text").innerHTML=data;
+    //console.log(data);
+
+    /* we've now got the original text bytes that were sent to amazon */
+
+        var superData = data;
+        /* get the word timings json */
+        fetch('test.json')
+          .then(response => response.text())
+          .then((data) => {
+                    
+            parsedData = superData;
+
+            /* we've now got the json of word timings */
+            var lines = data.split('\n');
+            var pad = 0;
+            for(var line = 0; line < lines.length; line++){
+                if (lines[line]) { /* the last line is empty, ignore */
+                    wordJson = JSON.parse(lines[line]);  // each line is a json object, parse it 
+
+                    //only insert spans on words - sentences and other can be in the json as well
+                    if (wordJson["type"] == "word") {
+                        /* note that the function wants the length as the last param, not the end byte position */
+                       var wordCharStart = substr_utf8_bytes(superData, wordJson['start'], wordJson['end']-wordJson['start']);
+                      /***** EVERY TIME YOU INSERT SOMETHING IT WILL MESS UP THE SUBSEQUENT POSITIONS ****/
+                        var openSpan = "<span class='ts-word' id='ts" + wordJson['time'] + "'>";
+                        var closeSpan = "</span>";
+
+                        parsedData = parsedData.insert(wordCharStart + pad, openSpan);
+                        parsedData = parsedData.insert(wordCharStart + pad + wordJson['value'].length + openSpan.length, closeSpan);
+                        
+                        /* keep track of the length of characters we've inserted on each iteration, to pad the results */
+                        pad += openSpan.length + closeSpan.length;
+                 }
+
+                }
+            }
+                 document.getElementById("original-text").innerHTML=parsedData;
+
+            /* make the new spans clickable to seek the audio */
+            var elements = document.getElementsByClassName("ts-word");
+             Array.from(elements).forEach(function(element) {
+                  element.addEventListener('click', seek);
+                });
+
+          }) /* end json fetch */
+
+
+
+
+  }) /* end original text fetch */
+
+
+
+
+
+
+
+
+
+//---
+
+
+
+
+
+function encode_utf8( s )
+{
+  return unescape( encodeURIComponent( s ) );
+}
+
+/* I've modified this to return the starting character not give me the substring */
+function substr_utf8_bytes(str, startInBytes, lengthInBytes) {
+
+   /* this function scans a multibyte string and returns a substring. 
+    * arguments are start position and length, both defined in bytes.
+    * 
+    * this is tricky, because javascript only allows character level 
+    * and not byte level access on strings. Also, all strings are stored
+    * in utf-16 internally - so we need to convert characters to utf-8
+    * to detect their length in utf-8 encoding.
+    *
+    * the startInBytes and lengthInBytes parameters are based on byte 
+    * positions in a utf-8 encoded string.
+    * in utf-8, for example: 
+    *       "a" is 1 byte, 
+            "ü" is 2 byte, 
+       and  "你" is 3 byte.
+    *
+    * NOTE:
+    * according to ECMAScript 262 all strings are stored as a sequence
+    * of 16-bit characters. so we need a encode_utf8() function to safely
+    * detect the length our character would have in a utf8 representation.
+    * 
+    * http://www.ecma-international.org/publications/files/ecma-st/ECMA-262.pdf
+    * see "4.3.16 String Value":
+    * > Although each value usually represents a single 16-bit unit of 
+    * > UTF-16 text, the language does not place any restrictions or 
+    * > requirements on the values except that they be 16-bit unsigned 
+    * > integers.
+    */
+
+    var resultStr = '';
+    var startInChars = 0;
+
+    // scan string forward to find index of first character
+    // (convert start position in byte to start position in characters)
+
+    for (bytePos = 0; bytePos < startInBytes; startInChars++) {
+
+        // get numeric code of character (is >128 for multibyte character)
+        // and increase "bytePos" for each byte of the character sequence
+
+        ch = str.charCodeAt(startInChars);
+        bytePos += (ch < 128) ? 1 : encode_utf8(str[startInChars]).length;
+    }
+
+    // now that we have the position of the starting character,
+    // we can built the resulting substring
+
+    // as we don't know the end position in chars yet, we start with a mix of
+    // chars and bytes. we decrease "end" by the byte count of each selected 
+    // character to end up in the right position
+    end = startInChars + lengthInBytes - 1;
+
+    for (n = startInChars; startInChars <= end; n++) {
+        // get numeric code of character (is >128 for multibyte character)
+        // and decrease "end" for each byte of the character sequence
+        ch = str.charCodeAt(n);
+        end -= (ch < 128) ? 1 : encode_utf8(str[n]).length;
+
+        resultStr += str[n];
+    }
+
+    return startInChars;
+}
+
+
+</script>
+
+
+<h2>Notes</h2>
+<p>This is a demo using Amazon Polly to turn text to speech. You first have to generate an mp3 and the associated Speech Marks word timings from a text file using <tt>polly.sh</tt>. This script requires you to have amazon cli installed and configured.</p>
+<p>Generating the mp3 and the timings file is <a href="https://aws.amazon.com/polly/pricing/" target="new">billable</a>, which can get expensive fast. The UK voice is a 'Neural' voice, which is billed at the higher rate of <b>$16.00 per million characters</b>, but because you also get billed for the Speech Marks at the same rate it is a total of <b>$32.00 per million characters</b>.</p>
+<p>I took and adapted most of the code from stack overflow, notably <a href="https://stackoverflow.com/questions/43150490/how-to-highlight-the-transcript-of-a-audio-file" target="new">the text highlighting code</a> and the <a href="https://stackoverflow.com/questions/11200451/extract-substring-by-utf-8-byte-positions" target="new">function to find the character at a byte position</a>. I couldn't find anything linking Amazon Polly's Speech Marks to the HTML, so I've done a dreadful version myself. The challenge is that Amazon gives you the byte position, not the character position, of the word.</p>
+<p>One issue is that at higher reading speeds, words aren't always highlighted or shown on the stage.</p>
+<p>Excluding highlighting of the original text, and using the words from the Speech Marks json would make this a lot more performant, and avoid various issues.</p>
+<p>If you ask for the sentence as well as the word, you get the original text with punctuation... so you could make it so it didn't need to rebuild the original text.</p>
+<h2>Tasks</h2>
+<ul>
+    <li>Figure out how to optimise it so it can still highlight at faster speeds.</li>
+    <li>The word highlighter is messing up 'active' - everything preceeding active is also active.</li>
+    <li>Select word when seeking the audio like <a href="http://westonruter.github.io/html5-audio-read-along/">this demo</a></li>
+    <li>Sentence-level not word-level seeking and highlighting?</li>
+    <li>Insert spans with timestamp server-side. There's no point in doing the heavy-lifting in the browser.</li>
+</ul>
+
+</body>
+</html>

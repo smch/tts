@@ -1,0 +1,113 @@
+<head>
+    <script>
+var utterance = new SpeechSynthesisUtterance();
+var wordIndex = 0;
+var global_words = [];
+utterance.lang = 'en-UK';
+utterance.rate = 1;
+
+window.onload = function(){ 
+
+    document.getElementById('playButton').onclick = function(){
+        var text    = document.getElementById('textarea').value;
+        var words   = text.split(" ");
+        global_words = words;
+        // Draw the text in a div
+        //drawTextInPanel(words);
+        spokenTextArray = words;
+        //utterance = new SpeechSynthesisUtterance();
+        utterance.text = text;
+        speechSynthesis.speak(utterance);
+        this.disabled=true;
+    };
+
+    document.getElementById('pauseButton').onclick = function(){
+    if (speechSynthesis) {
+      speechSynthesis.pause();
+    }
+    };
+
+    document.getElementById('resumeButton').onclick = function(){
+    if (speechSynthesis) {
+      speechSynthesis.resume();
+    }
+    };
+
+    document.getElementById('stopButton').onclick = function(){
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+    }
+    };    
+};
+
+
+
+
+utterance.onboundary = function(event){
+  	var e = document.getElementById('textarea');
+  	var word = getWordAt(e.value,event.charIndex);
+    // Show Speaking word : x
+  	document.getElementById("word").innerHTML = word;
+    //Increase index of span to highlight
+    console.info(wordIndex + global_words[wordIndex]);
+    
+    try{
+    	document.getElementById("word_span_"+wordIndex).style.color = "blue";
+    }catch(e){}
+    
+    wordIndex++;
+};
+
+utterance.onend = function(){
+		document.getElementById("word").innerHTML = "";
+    wordIndex = 0;
+    //document.getElementById("panel").innerHTML = "";
+};
+
+// Get the word of a string given the string and the index
+function getWordAt(str, pos) {
+    // Perform type conversions.
+    str = String(str);
+    pos = Number(pos) >>> 0;
+
+    // Search for the word's beginning and end.
+    var left = str.slice(0, pos + 1).search(/\S+$/),
+        right = str.slice(pos).search(/\s/);
+
+    // The last word in the string is a special case.
+    if (right < 0) {
+        return str.slice(left);
+    }
+    // Return the word, using the located bounds to extract it from the string.
+    return str.slice(left, right + pos);
+}
+
+function drawTextInPanel(words_array){
+		var panel = document.getElementById("panel");
+  	for(var i = 0;i < words_array.length;i++){
+    	var html = '<span id="word_span_'+i+'">'+words_array[i]+'</span>&nbsp;';
+    	panel.innerHTML += html;
+    }
+}
+</script>
+</head>
+<body>
+<textarea id="textarea" style="width:200px;height:200px;">This is a text area.  It is used as a simple test to check whether these words are highlighted as they are spoken using the web speech synthesis API (utterance).</textarea><br>
+
+<input type="button" id="playButton" value="Play"/>
+<input type="button" id="pauseButton" value="Pause"/>
+<input type="button" id="resumeButton" value="Resume"/>
+<input type="button" id="stopButton" value="Stop"/>
+
+Speaking word : <span id="word" style="color:blue;"></span><br><br>
+<div id="panel" style="min-width:300px;word-wrap:wrap;display:inline-block;">
+</div>
+
+<h2>Notes</h2>
+
+<ul>
+    <li>There seems to be an issue with long texts. There is apparently a <a href="https://stackoverflow.com/questions/21947730/chrome-speech-synthesis-with-longer-texts" target="new">solution</a> I haven't looked in to much.</li>
+    <li>Showing the right word doesn't seem to work at speed.</li>
+    <li>You don't seem to be able to adjust the speed rate whilst it is speaking or paused</li>
+</ul>
+</body>
