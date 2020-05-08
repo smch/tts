@@ -53,6 +53,6 @@ sed -e "s/’/'/g" test.txt | tr -cd "[:alnum:]._- ?!;,'" | say --interactive | 
 
 #generate the audio file
 sed -e "s/’/'/g"  test.txt | tr -cd "[:alnum:]._- ?!;,'" | say -o output.aac
-#convert it to mp3
-ffmpeg -i output.aac -acodec libmp3lame test.mp3
+#convert it to mp3, delete aac after
+ffmpeg -i output.aac -acodec libmp3lame test.mp3 && rm output.aac
 

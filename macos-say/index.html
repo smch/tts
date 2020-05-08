@@ -81,17 +81,6 @@ label {
 
 
 <script>
-String.prototype.insert = function(index, string) {
-  if (index > 0)
-  {
-    return this.substring(0, index) + string + this.substring(index, this.length);
-  }
-
-  return string + this;
-};
-
-
-
 window.onload = function() {
 
 var spns = document.getElementsByTagName("span");
@@ -143,7 +132,6 @@ function f1(){
 
 
 
-
 }; /* end window onload */
 
 function seek() {
@@ -175,24 +163,6 @@ fetch('output.txt')
 
   }) /* end original text fetch */
 
-
-
-
-
-
-
-
-
-//---
-
-
-
-
-
-function encode_utf8( s )
-{
-  return unescape( encodeURIComponent( s ) );
-}
 
 
 </script>
