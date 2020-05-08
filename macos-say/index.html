@@ -1,0 +1,206 @@
+<html>
+<head>
+    <title>TTS with MacOS Say and word seeking</title>
+<style>
+body {
+    width: 700px;
+    margin: auto;
+    padding-top: 20px;
+}
+h1,h2,h3,h4,h5,h6 {
+    font-family: sans-serif;
+}
+label {
+    font-family: sans-serif;
+}
+.ts-word {
+    border-bottom: 1px solid #bbb;
+    padding-left: 2px;
+    padding-right: 2px;
+    cursor: pointer;   
+}
+.ts-word:hover {
+    background: #555;
+    color: #eee;
+}
+.active {
+    background: black;
+    color: white;
+}
+.seen {
+    background: none;
+    border-bottom: 1px solid #eee;
+    color: black;
+}
+.seek-active {
+    background: yellow;
+}
+.active.seek-active {
+    background: black;
+    color: white;
+}
+#stage {
+    margin: auto;
+    margin-bottom: 10%;
+    width: 600px;
+    position: relative;
+}
+#word {
+    position: absolute;
+    top: 20px;
+    right: 0px;
+}
+#text {
+    padding-top: 20px;
+    font-size: 120%;
+    line-height: 150%;
+}
+</style>
+</head>
+<body>
+<div id = "stage">
+    <audio id = "audio" controls>
+      <source src="test.mp3"></source>
+    </audio>
+
+    <div id="playback-controls">
+        <p class="playback-rate" title="Note that increasing the reading rate will decrease accuracy of word highlights">
+            <label for="playback-rate">Reading rate:</label>
+                <input id="playback-rate" type="range" min="0.5" max="5.0" value="1.0" step="0.1" disabled onchange='this.nextElementSibling.textContent = String(Math.round(this.valueAsNumber * 10) / 10) + "\u00D7";'>
+                <output>1&times;</output>   
+        </p>
+    </div>
+
+    <div id = "text">
+        <div id="original-text"></div>
+    </div>
+
+    <div id="word"></div>
+</div>
+
+
+
+<script>
+String.prototype.insert = function(index, string) {
+  if (index > 0)
+  {
+    return this.substring(0, index) + string + this.substring(index, this.length);
+  }
+
+  return string + this;
+};
+
+
+
+window.onload = function() {
+
+var spns = document.getElementsByTagName("span");
+let audio = document.getElementById("audio");
+let wordArea = document.getElementById("word");
+
+
+    var rate_range_element = document.getElementById('playback-rate');
+    rate_range_element.disabled = false;
+    rate_range_element.addEventListener('change', function (e) {
+        audio.playbackRate = this.valueAsNumber;
+    });
+
+
+
+audio.addEventListener("timeupdate", f1);
+function f1(){
+  var i;  
+  for (i = 0 ; i< spns.length ; i++){
+    var time = Number(spns[i].id.slice(2));
+
+    //trouble with this is that it updates all spans, all the time. 
+    //so it is constantly adding and removing the active class I think
+
+    //it also doesn't work when you seek the audio
+    if(time < audio.currentTime * 1000){ // is the span timestamp less than the current audio time 
+      if (i>0) { 
+        spns[i -1].classList.add("seen"); //get the one prior to the current one, and mark it as seen
+        spns[i -1].classList.remove("active");  //no longer active
+        }
+        
+      spns[i].classList.add("active"); 
+ 
+    }
+  }
+
+  //this is annoying because it updates it even when the word hasn't changed. but you can't perceive it
+  var seekSpans = document.getElementsByClassName("seek-active");
+    while (seekSpans.length) {
+        seekSpans[0].classList.remove("seek-active");
+    }
+
+  var activeSpans = document.getElementsByClassName("active");
+  activeSpans[0].classList.add('seek-active');
+
+
+  wordArea.innerHTML = activeSpans[0].innerHTML;
+}
+
+
+
+
+}; /* end window onload */
+
+function seek() {
+   audio.currentTime = this.id.slice(2) / 1000;
+   audio.play()
+    var seen = document.getElementsByClassName("seen");
+    while (seen.length)
+    seen[0].classList.remove("seen");
+    var active = document.getElementsByClassName("active");
+    while (active.length)
+    active[0].classList.remove("active");
+}
+
+
+fetch('output.txt')
+  .then(response => response.text())
+  .then((data) => {
+    document.getElementById("original-text").innerHTML=data;
+    //console.log(data);
+
+ 
+
+            /* make the new spans clickable to seek the audio */
+            var elements = document.getElementsByClassName("ts-word");
+             Array.from(elements).forEach(function(element) {
+                  element.addEventListener('click', seek);
+                });
+
+
+  }) /* end original text fetch */
+
+
+
+
+
+
+
+
+
+//---
+
+
+
+
+
+function encode_utf8( s )
+{
+  return unescape( encodeURIComponent( s ) );
+}
+
+
+</script>
+
+
+<h2>Notes</h2>
+<p>First you generate the mp3 from the source file <tt>test.txt</tt> with MacOS <tt>say</tt>. </p>
+<p>The trouble is it has to read the entire file out loud in real time when generating the word timestamps.</p>
+<p>There are bugs with MacOS <tt>Say</tt>'s interactive mode where certain punctuation throws off the word-highlighting. To get around this, I have stripped out most non-alphanumeric characters, leaving only a few that don't seem to cause problems. This means that the text above isn't the same as the source text. You also lose line breaks.</p>
+</body>
+</html>
