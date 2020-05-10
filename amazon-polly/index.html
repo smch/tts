@@ -11,9 +11,6 @@ body {
 h1,h2,h3,h4,h5,h6 {
     font-family: sans-serif;
 }
-label, #time-remaining {
-    font-family: sans-serif;
-}
 #audio {
     width: 100%;
 }
@@ -60,13 +57,14 @@ label, #time-remaining {
 #original-text {
     white-space: pre-line;
 }
-div.sticky {
+.sticky {
     position: -webkit-sticky;
     position: sticky;
     top: 0;
     background: white;
     padding: 10px;
     border-bottom: 1px solid #eee;
+    font-family: sans-serif;
 }
 #playback-rate-container {
     display: flex;
@@ -75,6 +73,46 @@ div.sticky {
 }
 #time-remaining {
     margin-left: auto;
+}
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 15px;
+  border-radius: 5px;  
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%; 
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+#notification {
+    opacity: 1;
+    animation: fade 1s linear;
+    padding-top: 20px;
+}
+
+@keyframes fade {
+    0% {opacity: 0;}
+   100% {opacity: 1;}
 }
 </style>
 </head>
@@ -96,7 +134,7 @@ div.sticky {
         <div id="time-remaining"></div>
         </div>
 
-
+        <div id="notification"></div>
 
         <div id="word"></div>
 
@@ -153,15 +191,49 @@ function timeRemaining() {
 }
 /* end time remaining */
 
+
+
+
+
+function rewind() {
+    event.preventDefault();
+    console.log("rewind");
+    audio.currentTime = 0;
+    audio.play();
+    notification.style.transition = "opacity 1s linear 0s";
+    notification.style.opacity = 0;
+    notification.classList.add('fade-out');
+}
+
 window.onload = function() {
-  timeRemaining();
 
     var spns = document.getElementsByTagName("span");
     let audio = document.getElementById("audio");
     let wordArea = document.getElementById("word");
+    let notification = document.getElementById("notification");
+
+
+/*For when object has fully faded*/
+notification.addEventListener("transitionend", function() {
+  if (this.className == "fade-out") {
+    this.style.display = "none";
+  }
+}.bind(notification));
+
+
+//have we got a lastHeard local storage time?
+var lastHeard = localStorage.getItem('lastHeard');
+if ( lastHeard > 0 ) {
+    console.log("Resuming playback");
+    audio.currentTime = lastHeard;
+    notification.innerHTML = "Playback resumed from last position. <a href='' class='rewind' onclick='rewind()'>Start from beginning</a>.";
+}
+/* end last heard resume */
+
+  timeRemaining();
 
 /* playback speed */
-    var rate_range_element = document.getElementById('playback-rate');
+    let rate_range_element = document.getElementById('playback-rate');
     rate_range_element.disabled = false;
     rate_range_element.addEventListener('change', function (e) {
         audio.playbackRate = this.valueAsNumber;
@@ -175,6 +247,10 @@ function f1(){
   var i;  
 
   timeRemaining();
+
+  //set current audio time to local storage
+  localStorage.setItem('lastHeard', audio.currentTime);
+
 
   for (i = 0 ; i< spns.length ; i++){
     var time = Number(spns[i].id.slice(2));
@@ -190,7 +266,7 @@ function f1(){
         }
         
       spns[i].classList.add("active"); 
-spns[i].scrollIntoView({
+        spns[i].scrollIntoView({
             behavior: 'auto',
             block: 'center',
             inline: 'center'
@@ -201,13 +277,14 @@ spns[i].scrollIntoView({
 
   //this is annoying because it updates it even when the word hasn't changed. but you can't perceive it
   var seekSpans = document.getElementsByClassName("seek-active");
-    while (seekSpans.length) {
+    if (seekSpans.length > 0 ) {
         seekSpans[0].classList.remove("seek-active");
     }
 
   var activeSpans = document.getElementsByClassName("active");
-  activeSpans[0].classList.add('seek-active');
-
+    if (activeSpans.length > 0 ) {
+    activeSpans[0].classList.add('seek-active');
+    }
   /* show the current word */
   //wordArea.innerHTML = activeSpans[0].innerHTML;
 }
