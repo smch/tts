@@ -11,6 +11,10 @@ body {
 h1,h2,h3,h4,h5,h6 {
     font-family: sans-serif;
 }
+div
+{
+  transition: all 0.5s linear;
+}
 #audio {
     width: 100%;
 }
@@ -65,6 +69,7 @@ h1,h2,h3,h4,h5,h6 {
     padding: 10px;
     border-bottom: 1px solid #eee;
     font-family: sans-serif;
+    background: #eee;
 }
 #playback-rate-container {
     display: flex;
@@ -76,8 +81,6 @@ h1,h2,h3,h4,h5,h6 {
 }
 .slider {
   -webkit-appearance: none;
-  width: 100%;
-  height: 15px;
   border-radius: 5px;  
   background: #d3d3d3;
   outline: none;
@@ -89,24 +92,22 @@ h1,h2,h3,h4,h5,h6 {
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 25px;
-  height: 25px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%; 
-  background: #4CAF50;
+  background: black;
   cursor: pointer;
 }
 
 .slider::-moz-range-thumb {
-  width: 25px;
-  height: 25px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: #4CAF50;
+  background: black;
   cursor: pointer;
 }
 
 #notification {
-    opacity: 1;
-    animation: fade 1s linear;
     padding-top: 20px;
 }
 
@@ -126,7 +127,7 @@ h1,h2,h3,h4,h5,h6 {
         <div id="playback-rate-container">
             <div class="playback-rate">
                 <label for="playback-rate">Reading rate:</label>
-                    <input id="playback-rate" type="range" min="0.5" max="5.0" value="1.0" step="0.1" disabled onchange='this.nextElementSibling.textContent = String(Math.round(this.valueAsNumber * 10) / 10) + "\u00D7";'>
+                    <input id="playback-rate" class="slider" type="range" min="0.5" max="5.0" value="1.0" step="0.1" disabled onchange='this.nextElementSibling.textContent = String(Math.round(this.valueAsNumber * 10) / 10) + "\u00D7";'>
                     <output>1&times;</output>   
             </div>
 
@@ -192,7 +193,18 @@ function timeRemaining() {
 /* end time remaining */
 
 
+function fadeOut(e) {
+   e.style.transition = "opacity .5s linear 0s";
+    e.style.opacity = 0;
+      e.classList.add('fade-out');
 
+  /* explicitly set the parent height
+  so when this disappears the eventlistener fires
+  and resizes it with a css transition */    
+  parentHeight =  parseFloat(window.getComputedStyle(e.parentElement).height);
+    e.parentElement.style.height = (parentHeight) + "px";
+
+}
 
 
 function rewind() {
@@ -200,9 +212,7 @@ function rewind() {
     console.log("rewind");
     audio.currentTime = 0;
     audio.play();
-    notification.style.transition = "opacity 1s linear 0s";
-    notification.style.opacity = 0;
-    notification.classList.add('fade-out');
+    fadeOut(notification);
 }
 
 window.onload = function() {
@@ -211,18 +221,20 @@ window.onload = function() {
     let audio = document.getElementById("audio");
     let wordArea = document.getElementById("word");
     let notification = document.getElementById("notification");
+    lastHeard = localStorage.getItem('lastHeard');
+    loadedLastHeard = lastHeard;
 
 
 /*For when object has fully faded*/
 notification.addEventListener("transitionend", function() {
   if (this.className == "fade-out") {
-    this.style.display = "none";
+    height = this.offsetHeight;
+    this.parentElement.style.height = (parentHeight - height) + "px"; 
   }
-}.bind(notification));
+});
 
 
 //have we got a lastHeard local storage time?
-var lastHeard = localStorage.getItem('lastHeard');
 if ( lastHeard > 0 ) {
     console.log("Resuming playback");
     audio.currentTime = lastHeard;
@@ -251,6 +263,11 @@ function f1(){
   //set current audio time to local storage
   localStorage.setItem('lastHeard', audio.currentTime);
 
+  //if we've already started playing after having resumed, get rid of the notification
+  if(audio.currentTime - 2 > loadedLastHeard && loadedLastHeard > -1) {
+    fadeOut(notification);
+    loadedLastHeard = -1; //set to -1 so it will only fire once
+  }
 
   for (i = 0 ; i< spns.length ; i++){
     var time = Number(spns[i].id.slice(2));
@@ -294,6 +311,11 @@ function f1(){
 }; /* end window onload */
 
 function seek() {
+   //are we clicking instead of resuming playing from local storage?
+   if(loadedLastHeard > -1) {
+    fadeOut(notification);
+    loadedLastHeard = -1; //set to -1 so it will only fire once
+   }
    audio.currentTime = this.id.slice(2) / 1000;
    audio.play()
     var seen = document.getElementsByClassName("seen");
