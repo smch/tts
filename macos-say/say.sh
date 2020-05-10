@@ -4,6 +4,8 @@
 #you seem to get different errors depending on the terminal size
 #various puncutation seems to throw it off highlighting the correct characters
 
+#whenever there is punctuation on its own, it will break it
+
 #adapted from https://stackoverflow.com/questions/33768852/can-i-interact-with-the-output-of-the-osx-say-command-in-a-bash-script
 #when it is highlighting the text, the control characters are: 
 #$'\033'\[7mTHE WORD IS HERE$'\033'\(B$'\033'\[m
@@ -29,7 +31,7 @@ fi
 rm -f output.txt
 
 zmodload zsh/datetime
-sed -e "s/’/'/g" test.txt | tr -cd "[:alnum:]._- ?!;,'" | say --interactive | {
+sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/ /g' -e "s/’/'/g" -e "s/ *[-,;\!\?']/ /g" test.txt | tr -cd "[:alnum:]._- ?\!;,'" | say --interactive | {
     counter=0
     while IFS= read -r -d $'\r' line; do
         (( counter++ )) || continue  # first line in the output of `say --interactive` suppresses the cursor; discard this line

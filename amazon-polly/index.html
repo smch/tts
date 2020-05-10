@@ -3,15 +3,19 @@
     <title>TTS with Amazon Polly and word seeking</title>
 <style>
 body {
-    width: 700px;
+    max-width: 700px;
+    min-wdidth: 300px;
     margin: auto;
     padding-top: 20px;
 }
 h1,h2,h3,h4,h5,h6 {
     font-family: sans-serif;
 }
-label {
+label, #time-remaining {
     font-family: sans-serif;
+}
+#audio {
+    width: 100%;
 }
 .ts-word {
     border-bottom: 1px solid #bbb;
@@ -42,40 +46,66 @@ label {
 #stage {
     margin: auto;
     margin-bottom: 10%;
-    width: 600px;
     position: relative;
+    padding: 20px;
 }
 #word {
-    position: absolute;
-    top: 20px;
-    right: 0px;
+    padding-top: 20px;
 }
 #text {
     padding-top: 20px;
     font-size: 120%;
     line-height: 150%;
 }
+#original-text {
+    white-space: pre-line;
+}
+div.sticky {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    background: white;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+#playback-rate-container {
+    display: flex;
+    align-items: center;
+    padding: 20px 0px 0px 0px;
+}
+#time-remaining {
+    margin-left: auto;
+}
 </style>
 </head>
 <body>
 <div id = "stage">
-    <audio id = "audio" controls>
-      <source src="test.mp3"></source>
-    </audio>
+    <div class="sticky">
+        <audio id = "audio" controls>
+          <source src="test.mp3"></source>
+        </audio>
 
-    <div id="playback-controls">
-        <p class="playback-rate" title="Note that increasing the reading rate will decrease accuracy of word highlights">
-            <label for="playback-rate">Reading rate:</label>
-                <input id="playback-rate" type="range" min="0.5" max="5.0" value="1.0" step="0.1" disabled onchange='this.nextElementSibling.textContent = String(Math.round(this.valueAsNumber * 10) / 10) + "\u00D7";'>
-                <output>1&times;</output>   
-        </p>
+        <div id="playback-rate-container">
+            <div class="playback-rate">
+                <label for="playback-rate">Reading rate:</label>
+                    <input id="playback-rate" type="range" min="0.5" max="5.0" value="1.0" step="0.1" disabled onchange='this.nextElementSibling.textContent = String(Math.round(this.valueAsNumber * 10) / 10) + "\u00D7";'>
+                    <output>1&times;</output>   
+            </div>
+
+
+        <div id="time-remaining"></div>
+        </div>
+
+
+
+        <div id="word"></div>
+
     </div>
 
     <div id = "text">
         <div id="original-text"></div>
     </div>
 
-    <div id="word"></div>
 </div>
 
 
@@ -91,25 +121,61 @@ String.prototype.insert = function(index, string) {
 };
 
 
+/* give time remaining based on current playback rate */
+function timeRemaining() {
+    var durationDiv = document.getElementById('time-remaining');
+    d = (audio.duration - audio.currentTime) / audio.playbackRate;                  
+    var r = {};                                                                
+    var s = {                                                                 
+        hour: 3600,
+        min: 60,
+        sec: 1
+    };
+
+    Object.keys(s).forEach(function(key){
+        r[key] = Math.floor(d / s[key]);
+        d -= r[key] * s[key];
+    });
+
+    // for example: {day:2,hour:34,minute:56,second:7}
+      
+    if (r.sec < 10) {
+        r.sec = '0' + String(r.sec);
+    }
+    if (r.min < 10) {
+        r.min = '0' + String(r.min);
+    }
+    if (r.hour < 10) {
+        r.hour = '0' + String(r.hour);
+    }
+
+    durationDiv.innerHTML = r.hour + ":" + r.min + ":" + r.sec + " remaining at this speed";
+}
+/* end time remaining */
 
 window.onload = function() {
+  timeRemaining();
 
-var spns = document.getElementsByTagName("span");
-let audio = document.getElementById("audio");
-let wordArea = document.getElementById("word");
+    var spns = document.getElementsByTagName("span");
+    let audio = document.getElementById("audio");
+    let wordArea = document.getElementById("word");
 
-
+/* playback speed */
     var rate_range_element = document.getElementById('playback-rate');
     rate_range_element.disabled = false;
     rate_range_element.addEventListener('change', function (e) {
         audio.playbackRate = this.valueAsNumber;
+          timeRemaining();
     });
-
+/* end playback speed */
 
 
 audio.addEventListener("timeupdate", f1);
 function f1(){
   var i;  
+
+  timeRemaining();
+
   for (i = 0 ; i< spns.length ; i++){
     var time = Number(spns[i].id.slice(2));
 
@@ -124,7 +190,12 @@ function f1(){
         }
         
       spns[i].classList.add("active"); 
- 
+spns[i].scrollIntoView({
+            behavior: 'auto',
+            block: 'center',
+            inline: 'center'
+        });
+
     }
   }
 
@@ -137,10 +208,9 @@ function f1(){
   var activeSpans = document.getElementsByClassName("active");
   activeSpans[0].classList.add('seek-active');
 
-
-  wordArea.innerHTML = activeSpans[0].innerHTML;
+  /* show the current word */
+  //wordArea.innerHTML = activeSpans[0].innerHTML;
 }
-
 
 
 
@@ -171,7 +241,6 @@ fetch('test.txt')
         fetch('test.json')
           .then(response => response.text())
           .then((data) => {
-                    
             parsedData = superData;
 
             /* we've now got the json of word timings */
