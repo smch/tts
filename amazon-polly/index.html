@@ -189,7 +189,7 @@ function seek() {
     loadedLastHeard = -1; //set to -1 so it will only fire once
    }
    audio.currentTime = this.id.slice(2) / 1000;
-   audio.play()
+   audio.play();
 }
 
 function fadeOut(e) {
@@ -265,6 +265,7 @@ window.onload = function() {
     lastHeard = localStorage.getItem('lastHeard');
     loadedLastHeard = lastHeard;
 
+    audio.load(); // force audio to load, otherwise sometimes the loadeddata event isn't ever fired
 
 /*For when object has fully faded*/
 notification.addEventListener("transitionend", function() {
@@ -273,16 +274,6 @@ notification.addEventListener("transitionend", function() {
     this.parentElement.style.height = (parentHeight - height) + "px"; 
   }
 });
-
-
-//have we got a lastHeard local storage time?
-if ( lastHeard > 0 ) {
-    console.log("Resuming playback");
-    audio.currentTime = lastHeard;
-    notification.innerHTML = "Playback resumed from last position. <a href='' class='rewind' onclick='rewind()'>Start from beginning</a>.";
-}
-/* end last heard resume */
-
 
 
 /* playback speed */
@@ -297,6 +288,13 @@ if ( lastHeard > 0 ) {
 /* when loaded the mp3 */
 audio.addEventListener('loadeddata', function() {
   timeRemaining();
+
+    //have we got a lastHeard local storage time?
+    if ( lastHeard > 0 ) {
+      console.log("Resuming playback");
+      audio.currentTime = lastHeard;
+      notification.innerHTML = "Playback resumed from last position. <a href='' class='rewind' onclick='rewind()'>Start from beginning</a>.";
+  }
 });
 
 
@@ -374,6 +372,8 @@ fetch('test.txt')
              Array.from(elements).forEach(function(element) {
                   element.addEventListener('click', seek);
                 });
+
+
 
           }) /* end json fetch */
 
@@ -481,9 +481,13 @@ function substr_utf8_bytes(str, startInBytes, lengthInBytes) {
 <h2>Tasks</h2>
 <ul>
     <li>Figure out how to optimise it so it can still highlight at faster speeds.</li>
-    <li>The word highlighter is messing up 'active' - everything preceeding active is also active.</li>
-    <li>Select word when seeking the audio like <a href="http://westonruter.github.io/html5-audio-read-along/">this demo</a></li>
-    <li>Sentence-level not word-level seeking and highlighting?</li>
+    <li>Fix on iPad / iPhone </li>
+      <ul>
+        <li>Seeking doesn't work on page load</li>
+        <li>clicking the play element will resume</li>
+        <li>clicking text doesn't seek if you haven't already pressed play</li>
+      </ul>
+    <li>Sentence-level not word-level seeking and highlighting when at high speed?</li>
     <li>Insert spans with timestamp server-side. There's no point in doing the heavy-lifting in the browser.</li>
 </ul>
 
