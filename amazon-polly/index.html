@@ -3,6 +3,8 @@
     <title>TTS with Amazon Polly and word seeking</title>
     <link rel="shortcut icon" href="#" />
 <style>
+
+
 body {
     max-width: 700px;
     min-width: 300px;
@@ -16,6 +18,7 @@ div
 {
   transition: all 0.5s linear;
 }
+
 #audio {
     width: 100%;
 }
@@ -68,12 +71,19 @@ div
     background: #eee;
 }
 #playback-rate-container {
-    display: flex;
-    align-items: center;
     padding: 20px 0px 0px 0px;
 }
-#time-remaining {
-    margin-left: auto;
+
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 .slider {
   -webkit-appearance: none;
@@ -83,6 +93,7 @@ div
   opacity: 0.7;
   -webkit-transition: .2s;
   transition: opacity .2s;
+  height: 10px;
 }
 
 .slider::-webkit-slider-thumb {
@@ -111,24 +122,62 @@ div
     0% {opacity: 0;}
    100% {opacity: 1;}
 }
+
+
+  /* ----------- iPhone ----------- */
+
+/* Portrait */
+@media only screen 
+and (min-device-width: 375px) 
+  and (max-device-width: 667px) 
+  and (-webkit-min-device-pixel-ratio: 2) { 
+    .audio-container {
+      height: 100px;
+    }
+    body {
+      max-width: 90%;
+      font-size: 2rem; 
+    }
+    .col {
+      flex: 1;  
+      flex-basis: 100%;
+    }
+    .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 4.5rem;
+    height: 4.5rem;
+    }
+    .slider {
+      width: 300px;
+      height: 2rem;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+    }
+}
+
+  /* ----------- end iPhone ----------- */
 </style>
 </head>
 <body>
 <div id = "stage">
     <div class="sticky">
+      <div class="audio-container">
         <audio id = "audio" controls>
           <source src="test.mp3"></source>
         </audio>
+      </div>
 
-        <div id="playback-rate-container">
-            <div class="playback-rate">
+        <div id="playback-rate-container" class="row">
+            <div class="playback-rate col">
+              <div>
                 <label for="playback-rate">Reading rate:</label>
                     <input id="playback-rate" class="slider" type="range" min="0.5" max="5.0" value="1.0" step="0.1" disabled onchange='this.nextElementSibling.textContent = String(Math.round(this.valueAsNumber * 10) / 10) + "\u00D7";'>
                     <output>1&times;</output>   
+              </div>
             </div>
 
-
-        <div id="time-remaining"></div>
+         <div id="time-remaining" class="col"></div>
         </div>
 
         <div id="notification"></div>
