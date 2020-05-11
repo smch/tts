@@ -25,9 +25,16 @@ div
     padding-right: 2px;
     cursor: pointer;   
 }
-.ts-word:hover {
+.ts-word:active {
     background: #555;
     color: #eee;
+}
+
+@media (hover: hover) {
+    .ts-word:hover {
+      background: #555;
+      color: #eee;
+  }
 }
 .active {
     background: black;
@@ -293,7 +300,7 @@ audio.addEventListener('loadeddata', function() {
     if ( lastHeard > 0 ) {
       console.log("Resuming playback");
       audio.currentTime = lastHeard;
-      notification.innerHTML = "Playback resumed from last position. <a href='' class='rewind' onclick='rewind()'>Start from beginning</a>.";
+      notification.innerHTML = "Playback will resume from last position. <a href='' class='rewind' onclick='rewind()'>Start from beginning</a>.";
   }
 });
 
@@ -483,9 +490,7 @@ function substr_utf8_bytes(str, startInBytes, lengthInBytes) {
     <li>Figure out how to optimise it so it can still highlight at faster speeds.</li>
     <li>Fix on iPad / iPhone </li>
       <ul>
-        <li>Seeking doesn't work on page load</li>
-        <li>clicking the play element will resume</li>
-        <li>clicking text doesn't seek if you haven't already pressed play</li>
+        <li>Hover css element</li>
       </ul>
     <li>Sentence-level not word-level seeking and highlighting when at high speed?</li>
     <li>Insert spans with timestamp server-side. There's no point in doing the heavy-lifting in the browser.</li>
