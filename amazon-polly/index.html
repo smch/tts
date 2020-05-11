@@ -4,7 +4,7 @@
 <style>
 body {
     max-width: 700px;
-    min-wdidth: 300px;
+    min-width: 300px;
     margin: auto;
     padding-top: 20px;
 }
@@ -242,7 +242,7 @@ if ( lastHeard > 0 ) {
 }
 /* end last heard resume */
 
-  timeRemaining();
+
 
 /* playback speed */
     let rate_range_element = document.getElementById('playback-rate');
@@ -252,6 +252,11 @@ if ( lastHeard > 0 ) {
           timeRemaining();
     });
 /* end playback speed */
+
+/* when loaded the mp3 */
+audio.addEventListener('loadeddata', function() {
+  timeRemaining();
+});
 
 
 audio.addEventListener("timeupdate", f1);
