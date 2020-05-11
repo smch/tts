@@ -331,10 +331,12 @@ https://stackoverflow.com/a/44446342
 */
 var reqId;
 var startTracking = function() {
-  reqId = requestAnimationFrame(function play() {
-    setActive();
-    reqId = requestAnimationFrame(play);
-  });
+  if(audio.playbackRate > 2) {  //only work if rate is higher than normal
+    reqId = requestAnimationFrame(function play() {
+      setActive();
+      reqId = requestAnimationFrame(play);
+    });
+  }
 };
 
 var stopTracking = function () {
@@ -363,6 +365,15 @@ notification.addEventListener("transitionend", function() {
     rate_range_element.addEventListener('change', function (e) {
         audio.playbackRate = this.valueAsNumber;
           timeRemaining();
+          if(!audio.paused) { //if we're changing rate whilst playing
+           if(audio.playbackRate > 2) {
+             startTracking(); // start high speed tracking
+           }
+           if(audio.playbackRate < 2) {
+             stopTracking(); // stop high speed tracking
+           }           
+          }
+
     });
 /* end playback speed */
 
