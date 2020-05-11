@@ -205,6 +205,7 @@ String.prototype.insert = function(index, string) {
 };
 
 
+
 /* give time remaining based on current playback rate */
 function timeRemaining() {
     var durationDiv = document.getElementById('time-remaining');
@@ -322,6 +323,30 @@ window.onload = function() {
     loadedLastHeard = lastHeard;
 
     audio.load(); // force audio to load, otherwise sometimes the loadeddata event isn't ever fired
+
+
+/* 
+high speed polling of current time 
+https://stackoverflow.com/a/44446342
+*/
+var reqId;
+var startTracking = function() {
+  reqId = requestAnimationFrame(function play() {
+    setActive();
+    reqId = requestAnimationFrame(play);
+  });
+};
+
+var stopTracking = function () {
+  if (reqId) {
+    cancelAnimationFrame(reqId);
+  }
+};
+
+audio.addEventListener('play', startTracking);
+audio.addEventListener('pause', stopTracking);
+/* end high speed polling */
+
 
 /*For when object has fully faded*/
 notification.addEventListener("transitionend", function() {
@@ -542,6 +567,7 @@ function substr_utf8_bytes(str, startInBytes, lengthInBytes) {
         <li>Hover css element</li>
       </ul>
     <li>Sentence-level not word-level seeking and highlighting when at high speed?</li>
+    <li>Faster polling at high speed using e.g. <a href="https://stackoverflow.com/a/44446342">requestAnimationFrame</a>?</li>
     <li>Insert spans with timestamp server-side. There's no point in doing the heavy-lifting in the browser.</li>
 </ul>
 
