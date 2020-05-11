@@ -1,6 +1,7 @@
 <html>
 <head>
     <title>TTS with Amazon Polly and word seeking</title>
+    <link rel="shortcut icon" href="#" />
 <style>
 body {
     max-width: 700px;
@@ -29,18 +30,6 @@ div
     color: #eee;
 }
 .active {
-    background: black;
-    color: white;
-}
-.seen {
-    background: none;
-    border-bottom: 1px solid #eee;
-    color: black;
-}
-.seek-active {
-    background: yellow;
-}
-.active.seek-active {
     background: black;
     color: white;
 }
@@ -193,6 +182,16 @@ function timeRemaining() {
 /* end time remaining */
 
 
+function seek() {
+   //are we clicking instead of resuming playing from local storage?
+   if(loadedLastHeard > -1) {
+    fadeOut(notification);
+    loadedLastHeard = -1; //set to -1 so it will only fire once
+   }
+   audio.currentTime = this.id.slice(2) / 1000;
+   audio.play()
+}
+
 function fadeOut(e) {
    e.style.transition = "opacity .5s linear 0s";
     e.style.opacity = 0;
@@ -206,6 +205,48 @@ function fadeOut(e) {
 
 }
 
+/* get closest number in array */
+function closest (num, arr) {
+    var curr = arr[0];
+    var diff = Math.abs (num - curr);
+    for (var val = 0; val < arr.length; val++) {
+        var newdiff = Math.abs (num - arr[val]);
+        if (newdiff < diff) {
+            diff = newdiff;
+            curr = arr[val];
+        }
+    }
+    return curr;
+}
+
+
+
+/* get element closest to timestamp */
+function getActive() {
+  var spns = document.getElementsByTagName("span");
+  var timestamps = new Array();
+  for (i = 0 ; i< spns.length ; i++){
+    var time = Number(spns[i].id.slice(2));
+      timestamps.push(time);
+    }
+    var closestWord = closest(audio.currentTime * 1000, timestamps);
+    var target = document.getElementById("ts"+closestWord);
+    return target;
+}
+
+
+  /* set active */
+  function setActive() {
+    var active = document.getElementsByClassName("active");
+    while (active.length)
+      active[0].classList.remove("active");
+
+    /* mark current word as active */
+    activeItem = getActive();
+    if (activeItem !== null ) {
+     activeItem.classList.add('active');
+    }
+  }
 
 function rewind() {
     event.preventDefault();
@@ -259,8 +300,8 @@ audio.addEventListener('loadeddata', function() {
 });
 
 
-audio.addEventListener("timeupdate", f1);
-function f1(){
+/* when mp3 time changes */
+audio.addEventListener("timeupdate", function () {
   var i;  
 
   timeRemaining();
@@ -274,62 +315,16 @@ function f1(){
     loadedLastHeard = -1; //set to -1 so it will only fire once
   }
 
-  for (i = 0 ; i< spns.length ; i++){
-    var time = Number(spns[i].id.slice(2));
+  setActive(); //trouble is this can fire before we've actually got the text, so I'm calling it from there as well
 
-    //trouble with this is that it updates all spans, all the time. 
-    //so it is constantly adding and removing the active class I think
-
-    //it also doesn't work when you seek the audio
-    if(time < audio.currentTime * 1000){ // is the span timestamp less than the current audio time 
-      if (i>0) { 
-        spns[i -1].classList.add("seen"); //get the one prior to the current one, and mark it as seen
-        spns[i -1].classList.remove("active");  //no longer active
-        }
-        
-      spns[i].classList.add("active"); 
-        spns[i].scrollIntoView({
-            behavior: 'auto',
-            block: 'center',
-            inline: 'center'
-        });
-
-    }
-  }
-
-  //this is annoying because it updates it even when the word hasn't changed. but you can't perceive it
-  var seekSpans = document.getElementsByClassName("seek-active");
-    if (seekSpans.length > 0 ) {
-        seekSpans[0].classList.remove("seek-active");
-    }
-
-  var activeSpans = document.getElementsByClassName("active");
-    if (activeSpans.length > 0 ) {
-    activeSpans[0].classList.add('seek-active');
-    }
   /* show the current word */
   //wordArea.innerHTML = activeSpans[0].innerHTML;
-}
+});
 
 
 
 }; /* end window onload */
 
-function seek() {
-   //are we clicking instead of resuming playing from local storage?
-   if(loadedLastHeard > -1) {
-    fadeOut(notification);
-    loadedLastHeard = -1; //set to -1 so it will only fire once
-   }
-   audio.currentTime = this.id.slice(2) / 1000;
-   audio.play()
-    var seen = document.getElementsByClassName("seen");
-    while (seen.length)
-    seen[0].classList.remove("seen");
-    var active = document.getElementsByClassName("active");
-    while (active.length)
-    active[0].classList.remove("active");
-}
 
 
 fetch('test.txt')
@@ -373,6 +368,7 @@ fetch('test.txt')
             }
                  document.getElementById("original-text").innerHTML=parsedData;
 
+            setActive();    
             /* make the new spans clickable to seek the audio */
             var elements = document.getElementsByClassName("ts-word");
              Array.from(elements).forEach(function(element) {
